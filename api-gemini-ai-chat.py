@@ -29,6 +29,9 @@ DB_FILE = "database.db"
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+# Default password dashboard: admin123
+DEFAULT_PASSWORD_HASH = hashlib.sha256(b"admin123").hexdigest()
+
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -39,7 +42,7 @@ def init_db():
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('API_KEY', 'dummy-key')")
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('BASE_URL', 'http://localhost:3001/v1')")
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('AVAILABLE_MODELS', 'gemini-web')")
-    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('DASHBOARD_PASSWORD', '')")
+    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('DASHBOARD_PASSWORD', ?)", (DEFAULT_PASSWORD_HASH,))
     
     conn.commit()
     conn.close()
@@ -74,9 +77,7 @@ def update_dashboard_password(new_password: str):
     conn.close()
 
 def verify_password(password: str) -> bool:
-    stored = get_setting("DASHBOARD_PASSWORD")
-    if not stored:
-        return True  # Belum ada password = bebas akses
+    stored = get_setting("DASHBOARD_PASSWORD") or DEFAULT_PASSWORD_HASH
     return hashlib.sha256(password.encode()).hexdigest() == stored
 
 # ==========================================
@@ -92,9 +93,6 @@ def create_session() -> str:
 def is_valid_session(token: str | None) -> bool:
     if not token:
         return False
-    # Jika belum ada password, semua akses diizinkan
-    if not get_setting("DASHBOARD_PASSWORD"):
-        return True
     return token in valid_sessions
 
 def invalidate_session(token: str | None):
