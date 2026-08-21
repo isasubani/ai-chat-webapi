@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — AI Chat Webapp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 font-sans min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-sm px-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
+
+            <!-- Logo / Title -->
+            <div class="text-center mb-8">
+                <div class="text-4xl mb-3">🤖</div>
+                <h1 class="text-2xl font-bold text-white">AI Chat Webapp</h1>
+                <p class="text-gray-400 text-sm mt-1">Masukkan password untuk masuk ke dashboard</p>
+            </div>
+
+            <!-- Error Alert -->
+            {% if error %}
+            <div class="mb-5 px-4 py-3 bg-red-900/50 text-red-300 rounded-lg border border-red-700/50 text-sm flex items-center gap-2">
+                <span>⚠️</span> {{ error }}
+            </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form action="/login" method="POST">
+                <input type="hidden" name="next" value="{{ next }}">
+                <div class="mb-5">
+                    <label class="block text-gray-300 text-sm font-semibold mb-2" for="password">
+                        Password
+                    </label>
+                    <input
+                        class="w-full bg-gray-900 border border-gray-600 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        id="password" name="password" type="password" placeholder="••••••••" autofocus>
+                </div>
+
+                <button
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-lg focus:outline-none transition duration-200 mt-1"
+                    type="submit">
+                    Masuk
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

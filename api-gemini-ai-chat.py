@@ -3,7 +3,9 @@ import json
 import sqlite3
 import logging
 import os
-from fastapi import FastAPI, Request, Form
+import hashlib
+import secrets
+from fastapi import FastAPI, Request, Form, Cookie, Depends
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
@@ -37,6 +39,7 @@ def init_db():
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('API_KEY', 'dummy-key')")
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('BASE_URL', 'http://localhost:3001/v1')")
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('AVAILABLE_MODELS', 'gemini-web')")
+    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('DASHBOARD_PASSWORD', '')")
     
     conn.commit()
     conn.close()
@@ -59,6 +62,51 @@ def update_settings(cookie, api_key, base_url, models):
     conn.commit()
     conn.close()
 
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def update_dashboard_password(new_password: str):
+    hashed = hash_password(new_password)
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("UPDATE settings SET value=? WHERE key='DASHBOARD_PASSWORD'", (hashed,))
+    conn.commit()
+    conn.close()
+
+def verify_password(password: str) -> bool:
+    stored = get_setting("DASHBOARD_PASSWORD")
+    if not stored:
+        return True  # Belum ada password = bebas akses
+    return hashlib.sha256(password.encode()).hexdigest() == stored
+
+# ==========================================
+# 3. SESSION MANAGEMENT (in-memory)
+# ==========================================
+valid_sessions: set = set()
+
+def create_session() -> str:
+    token = secrets.token_hex(32)
+    valid_sessions.add(token)
+    return token
+
+def is_valid_session(token: str | None) -> bool:
+    if not token:
+        return False
+    # Jika belum ada password, semua akses diizinkan
+    if not get_setting("DASHBOARD_PASSWORD"):
+        return True
+    return token in valid_sessions
+
+def invalidate_session(token: str | None):
+    if token and token in valid_sessions:
+        valid_sessions.discard(token)
+
+def require_auth(request: Request, session_token: str | None = Cookie(default=None)):
+    if not is_valid_session(session_token):
+        next_url = request.url.path
+        return RedirectResponse(url=f"/login?next={next_url}", status_code=302)
+    return None
+
 init_db()
 logger.info("Aplikasi dimulai. Database siap.")
 
@@ -76,10 +124,48 @@ def get_gemini_client():
     return gemini
 
 # ==========================================
-# 3. ROUTES UNTUK DASHBOARD UI
+# 4. ROUTES UNTUK DASHBOARD UI
 # ==========================================
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, next: str = "/"):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": "", "next": next}
+    )
+
+@app.post("/login")
+async def login(
+    request: Request,
+    password: str = Form(""),
+    next: str = Form("/")
+):
+    if verify_password(password):
+        token = create_session()
+        response = RedirectResponse(url=next or "/", status_code=303)
+        response.set_cookie("session_token", token, httponly=True, samesite="lax")
+        logger.info("Login dashboard berhasil.")
+        return response
+    logger.warning("Percobaan login gagal.")
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": "Password salah. Silakan coba lagi.", "next": next}
+    )
+
+@app.get("/logout")
+async def logout(session_token: str | None = Cookie(default=None)):
+    invalidate_session(session_token)
+    response = RedirectResponse(url="/login", status_code=302)
+    response.delete_cookie("session_token")
+    logger.info("Logout dashboard.")
+    return response
+
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, message: str = ""):
+async def dashboard(request: Request, message: str = "", session_token: str | None = Cookie(default=None)):
+    auth = require_auth(request, session_token)
+    if auth:
+        return auth
     return templates.TemplateResponse(
         request=request,
         name="settings.html",
@@ -93,24 +179,46 @@ async def dashboard(request: Request, message: str = ""):
     )
 
 @app.get("/logs", response_class=HTMLResponse)
-async def logs_page(request: Request):
+async def logs_page(request: Request, session_token: str | None = Cookie(default=None)):
+    auth = require_auth(request, session_token)
+    if auth:
+        return auth
     return templates.TemplateResponse(request=request, name="logs.html", context={})
 
 @app.post("/update-settings")
 async def update_settings_route(
+    request: Request,
     cookie: str = Form(""), 
     api_key: str = Form(""),
     base_url: str = Form(""),
-    models: str = Form("")
+    models: str = Form(""),
+    new_password: str = Form(""),
+    confirm_password: str = Form(""),
+    session_token: str | None = Cookie(default=None)
 ):
+    auth = require_auth(request, session_token)
+    if auth:
+        return auth
     global gemini
     update_settings(cookie, api_key, base_url, models)
     gemini = None  # Reset client
+
+    msg = "Pengaturan berhasil diperbarui!"
+    if new_password:
+        if new_password != confirm_password:
+            return RedirectResponse(url="/?message=Password+tidak+cocok!", status_code=303)
+        update_dashboard_password(new_password)
+        msg = "Pengaturan dan password berhasil diperbarui!"
+        logger.info("Password dashboard diperbarui.")
+
     logger.info("Settings diperbarui via Dashboard.")
-    return RedirectResponse(url="/?message=Pengaturan+berhasil+diperbarui!", status_code=303)
+    return RedirectResponse(url=f"/?message={msg.replace(' ', '+')}", status_code=303)
 
 @app.get("/api/logs")
-async def get_logs():
+async def get_logs(request: Request, session_token: str | None = Cookie(default=None)):
+    auth = require_auth(request, session_token)
+    if auth:
+        return auth
     if os.path.exists(LOG_FILE):
         with open(LOG_FILE, "r") as f:
             lines = f.readlines()
