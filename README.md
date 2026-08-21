@@ -1,4 +1,4 @@
-# 🤖 OmniRoute — AI Chat Web API Bridge
+# 🤖 AI Chat Webapp — AI Chat Web API Bridge
 
 > Ubah sesi AI chat browser kamu (Gemini, Claude, Qwen, DeepSeek, dll.) menjadi API endpoint yang kompatibel dengan OpenAI — tanpa bayar API key!
 
@@ -8,7 +8,7 @@
 
 Banyak layanan AI terbaik seperti **Google Gemini**, **Anthropic Claude**, **Qwen**, dan **DeepSeek** tersedia **gratis** melalui antarmuka web browser mereka. Namun untuk digunakan oleh AI coding client seperti **OpenCode**, **Continue**, **Cursor**, atau aplikasi lain, biasanya diperlukan API key berbayar.
 
-**OmniRoute hadir sebagai solusi:**
+**AI Chat Webapp hadir sebagai solusi:**
 
 Project ini bertindak sebagai **jembatan (bridge/proxy)** yang:
 1. Mengambil sesi login kamu dari browser (session cookie)
@@ -20,11 +20,11 @@ Dengan kata lain, kamu bisa menikmati model AI premium **secara gratis** hanya d
 ```
 AI Client (OpenCode, Continue, dll.)
         ↓  request OpenAI format
-   OmniRoute (localhost:3001)
+   AI Chat Webapp (localhost:3001)
         ↓  session cookie
   Gemini / Claude / Qwen / DeepSeek Web
         ↓  response
-   OmniRoute → format ulang ke OpenAI
+   AI Chat Webapp → format ulang ke OpenAI
         ↓
 AI Client menerima response ✅
 ```
