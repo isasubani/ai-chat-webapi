@@ -39,6 +39,7 @@ AI Client menerima response ✅
 - 🔑 **Multi-Session** — dukung berbagai AI dengan session cookie masing-masing
 - 🔐 **API Key Auth** — proteksi endpoint dengan Bearer token custom
 - ⚡ **Streaming Support** — respons streaming (SSE) didukung penuh
+- 🛡️ **Dashboard Auth** — halaman dashboard dilindungi password (disimpan di SQLite)
 
 ---
 
@@ -63,7 +64,17 @@ python api-gemini-ai-chat.py
 
 Server akan berjalan di: `http://localhost:3001`
 
-### 3. Konfigurasi via Dashboard
+### 3. Login ke Dashboard
+
+Buka browser dan akses `http://localhost:3001` — kamu akan diarahkan ke halaman login.
+
+> **Kredensial default:**
+> - Password: `admin123`
+
+> [!IMPORTANT]
+> Segera ganti password default setelah pertama kali login! Buka Settings → scroll ke bawah → bagian **Ganti Password Dashboard**.
+
+### 4. Konfigurasi via Dashboard
 
 Buka browser dan akses `http://localhost:3001`, lalu isi:
 
@@ -74,14 +85,14 @@ Buka browser dan akses `http://localhost:3001`, lalu isi:
 | **Provider API Key** | Kunci Bearer Token untuk autentikasi client |
 | **Google SESSION_COOKIE** | Cookie sesi dari browser (lihat cara mendapatkan di bawah) |
 
-### 4. Cara Mendapatkan Session Cookie (Gemini)
+### 5. Cara Mendapatkan Session Cookie (Gemini)
 
 1. Buka dan login ke [gemini.google.com](https://gemini.google.com)
 2. Tekan **F12** → buka tab **Application** → **Cookies**
 3. Cari cookie bernama `__Secure-1PSID` atau `__Secure-1PSIDTS`
 4. Copy value-nya dan paste ke dashboard
 
-### 5. Hubungkan ke AI Client
+### 6. Hubungkan ke AI Client
 
 Konfigurasi AI client kamu (contoh: OpenCode) dengan:
 
@@ -112,6 +123,7 @@ gemini-ai-chat/
 ├── api-gemini-ai-chat.py   # Entry point — FastAPI app & semua routes
 ├── requirements.txt        # Python dependencies
 ├── templates/
+│   ├── login.html          # Halaman login dashboard
 │   ├── settings.html       # Dashboard konfigurasi
 │   └── logs.html           # Halaman application logs
 └── README.md
