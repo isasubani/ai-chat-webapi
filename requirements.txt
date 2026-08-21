@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+gemini-webapi
+jinja2
+python-multipart

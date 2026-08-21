@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Logs - OmniRoute</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #log-content {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-900 text-white flex flex-col shadow-lg">
+            <div class="p-6 text-2xl font-bold border-b border-gray-800">
+                OmniRoute
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <!-- Menu Tidak Aktif -->
+                <a href="/" class="block px-4 py-2 hover:bg-gray-800 rounded text-gray-300 transition-colors">Gemini AI
+                    Chat</a>
+                <!-- Menu Aktif -->
+                <a href="/logs"
+                    class="block px-4 py-2 bg-gray-800 rounded text-blue-400 font-semibold shadow">Application Logs</a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            <!-- Topbar -->
+            <header class="bg-white shadow-sm px-6 py-4 border-b border-gray-200">
+                <h1 class="text-xl font-semibold text-gray-800">System Monitor</h1>
+            </header>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 flex flex-col">
+
+                <!-- Logs Monitor (Full Height) -->
+                <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col flex-1 border border-gray-200">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                        <h2 class="text-lg font-bold text-gray-800">Application Logs</h2>
+                        <span
+                            class="flex items-center text-xs font-semibold text-green-600 bg-green-100 px-3 py-1.5 rounded-full border border-green-200">
+                            <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span> Live Stream
+                        </span>
+                    </div>
+                    <div class="bg-gray-900 rounded-lg p-4 flex-1 overflow-hidden shadow-inner relative">
+                        <pre id="log-content"
+                            class="text-green-400 font-mono text-sm h-full overflow-y-auto whitespace-pre-wrap leading-relaxed"></pre>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                const text = await response.text();
+                const logEl = document.getElementById('log-content');
+
+                const isScrolledToBottom = logEl.scrollHeight - logEl.clientHeight <= logEl.scrollTop + 1;
+                logEl.textContent = text;
+
+                if (isScrolledToBottom) {
+                    logEl.scrollTop = logEl.scrollHeight;
+                }
+            } catch (err) {
+                console.error("Gagal mengambil log", err);
+            }
+        }
+
+        fetchLogs();
+        setInterval(fetchLogs, 3000); // Refresh tiap 3 detik
+    </script>
+</body>
+
+</html>
