@@ -59,14 +59,50 @@
     </div>
 
     <script>
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatLogLine(line) {
+            if (!line.trim()) return '';
+
+            const match = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\s+-\s+([A-Z]+)\s+-\s+(.*)$/);
+
+            if (match) {
+                const [_, date, level, message] = match;
+                let levelColor = 'text-green-400';
+                if (level === 'ERROR') levelColor = 'text-red-500 font-bold';
+                else if (level === 'WARNING') levelColor = 'text-yellow-400 font-bold';
+                else if (level === 'INFO') levelColor = 'text-blue-400 font-bold';
+
+                return `<span class="text-gray-500">[${date}]</span> <span class="${levelColor}">${level}</span> <span class="text-gray-300">${escapeHtml(message)}</span>`;
+            }
+
+            return `<span class="text-gray-300">${escapeHtml(line)}</span>`;
+        }
+
         async function fetchLogs() {
             try {
                 const response = await fetch('/api/logs');
-                const text = await response.text();
+                let text = await response.text();
+
+                // FastAPI secara default me-return string sebagai JSON ("string\nstring"),
+                // jadi kita parse dulu untuk mendapatkan actual newline characters.
+                try {
+                    text = JSON.parse(text);
+                } catch (e) { }
+
                 const logEl = document.getElementById('log-content');
 
                 const isScrolledToBottom = logEl.scrollHeight - logEl.clientHeight <= logEl.scrollTop + 1;
-                logEl.textContent = text;
+
+                const formattedText = text.split('\n').map(formatLogLine).join('\n');
+                logEl.innerHTML = formattedText;
 
                 if (isScrolledToBottom) {
                     logEl.scrollTop = logEl.scrollHeight;

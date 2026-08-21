@@ -35,8 +35,8 @@ def init_db():
     # Default settings jika belum ada
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('SESSION_COOKIE', '')")
     c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('API_KEY', 'dummy-key')")
-    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('BASE_URL', 'https://gemini-chat.isasubani.my.id/v1')")
-    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('AVAILABLE_MODELS', 'gemini-web,prod/gemini-web')")
+    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('BASE_URL', 'http://localhost:3001/v1')")
+    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('AVAILABLE_MODELS', 'gemini-web')")
     
     conn.commit()
     conn.close()

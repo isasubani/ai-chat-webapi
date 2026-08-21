@@ -50,8 +50,8 @@
                             </label>
                             <input
                                 class="shadow-sm appearance-none border border-gray-300 rounded w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                                id="base_url" name="base_url" type="text"
-                                placeholder="https://gemini-chat.isasubani.my.id/v1" value="{{ current_base_url }}">
+                                id="base_url" name="base_url" type="text" placeholder="http://localhost:3001/v1"
+                                value="{{ current_base_url }}">
                             <p class="text-xs text-gray-500 mt-1">Alamat endpoint API yang akan dihubungkan ke OpenCode
                                 atau aplikasi lain.</p>
                         </div>
@@ -100,8 +100,8 @@
                                     </li>
                                     <li>Tekan <strong>F12</strong> untuk membuka Developer Tools.</li>
                                     <li>Masuk ke tab <strong>Application</strong> > <strong>Cookies</strong>.</li>
-                                    <li>Cari cookie bernama <code>SESSION_COOKIE</code> (atau yang diawali
-                                        <code>g.a000...</code>).
+                                    <li>Cari cookie bernama <code>__Secure-1PSID</code> atau
+                                        <code>__Secure-1PSIDTS</code>.
                                     </li>
                                     <li>Copy Value-nya dan paste ke dalam input di atas.</li>
                                 </ol>
