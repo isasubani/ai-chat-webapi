@@ -40,6 +40,10 @@ AI Client menerima response ✅
 - 🔐 **API Key Auth** — proteksi endpoint dengan Bearer token custom
 - ⚡ **Streaming Support** — respons streaming (SSE) didukung penuh
 - 🛡️ **Dashboard Auth** — halaman dashboard dilindungi password (disimpan di SQLite)
+- 🔄 **Auto-Refresh Cookie** — pembaruan token sesi otomatis di latar belakang untuk mencegah kedaluwarsa
+- 🧠 **In-Memory Multi-Turn Chat (Super Cepat)** — caching sesi chat di memori RAM server agar riwayat percakapan tetap terjaga secara instan tanpa jeda (*anti-ngelag*)
+- 🖼️ **Multimodal & Image Generation** — dukung pengiriman file/gambar serta pembuatan gambar otomatis via prompt atau model *Imagen*
+- 📜 **Chat History Retrieval** — endpoint khusus `/v1/chat/history/{chat_id}` untuk membaca riwayat percakapan lama langsung dari server Gemini
 
 ---
 
