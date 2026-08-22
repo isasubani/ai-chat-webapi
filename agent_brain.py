@@ -10,20 +10,28 @@ def get_os_info():
         "machine": platform.machine()
     }
 
-def run_shell_command(command: str) -> str:
-    """Menjalankan perintah terminal sesuai OS lokal."""
+def run_shell_command_realtime(command: str):
+    """Menjalankan perintah terminal dan menghasilkan (yield) output secara real-time."""
     try:
-        result = subprocess.run(
-            command, 
-            shell=True, 
-            capture_output=True, 
-            text=True, 
-            timeout=60
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
         )
-        output = f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}\nExit Code: {result.returncode}"
-        return output
+        
+        # Membaca output baris per baris secara real-time
+        for line in process.stdout:
+            yield line
+            
+        process.wait()
+        if process.returncode != 0:
+            yield f"\n[Exit Code: {process.returncode}]"
+            
     except Exception as e:
-        return f"Error executing command: {str(e)}"
+        yield f"\nError executing command: {str(e)}"
 
 def read_local_file(file_path: str) -> str:
     """Membaca file lokal."""

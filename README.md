@@ -33,6 +33,8 @@ AI Client menerima response ✅
 
 ## ✨ Fitur
 
+## ✨ Fitur
+
 - 🔌 **OpenAI-Compatible API** — endpoint `/v1/chat/completions` & `/v1/models`
 - 🌐 **Dashboard Web** — konfigurasi langsung dari browser, tidak perlu edit file
 - 📋 **Application Logs** — monitor aktivitas request secara real-time
@@ -42,6 +44,7 @@ AI Client menerima response ✅
 - 🛡️ **Dashboard Auth** — halaman dashboard dilindungi password (disimpan di SQLite)
 - 🔄 **Auto-Refresh Cookie** — pembaruan token sesi otomatis di latar belakang untuk mencegah kedaluwarsa
 - 🧠 **In-Memory Multi-Turn Chat (Super Cepat)** — caching sesi chat di memori RAM server agar riwayat percakapan tetap terjaga secara instan tanpa jeda (*anti-ngelag*)
+- 💻 **OS Awareness & Real-time Terminal** — kemampuan agen AI mendeteksi OS target (macOS, Linux, Windows) dan mengeksekusi perintah terminal secara real-time langsung dari respons chat
 - 🖼️ **Multimodal & Image Generation** — dukung pengiriman file/gambar serta pembuatan gambar otomatis via prompt atau model *Imagen*
 - 📜 **Chat History Retrieval** — endpoint khusus `/v1/chat/history/{chat_id}` untuk membaca riwayat percakapan lama langsung dari server Gemini
 
