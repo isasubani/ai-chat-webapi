@@ -11,6 +11,9 @@ from fastapi.templating import Jinja2Templates
 import uvicorn
 from gemini_webapi import GeminiClient
 
+# Import modul Agent & OS Awareness yang baru
+from agent_brain import get_os_info, run_shell_command, read_local_file, write_local_file
+
 # ==========================================
 # 1. SETUP LOGGING
 # ==========================================
@@ -119,7 +122,6 @@ async def get_gemini_client():
         return None
 
     if gemini is None:
-        # Fitur: Auto-Refresh Cookie diaktifkan
         gemini = GeminiClient(session_id=cookie, auto_refresh=True)
         try:
             await gemini.init(timeout=30, auto_close=False, auto_refresh=True)
@@ -232,7 +234,7 @@ async def get_logs(request: Request, session_token: str | None = Cookie(default=
     return "Belum ada log."
 
 # ==========================================
-# 5. ROUTES UNTUK API AI (OPENAI-COMPATIBLE + FITUR TAMBAHAN)
+# 5. ROUTES UNTUK API AI (OPENAI-COMPATIBLE + TOOLS & OS AWARENESS)
 # ==========================================
 @app.get("/v1/models")
 async def list_models():
@@ -253,7 +255,6 @@ async def list_models():
         "data": data
     })
 
-# Fitur Tambahan: Membaca Riwayat Chat Lama berdasarkan Chat ID (cid)
 @app.get("/v1/chat/history/{chat_id}")
 async def get_chat_history(chat_id: str):
     client = await get_gemini_client()
@@ -266,9 +267,8 @@ async def get_chat_history(chat_id: str):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-
-# Simpan sesi chat aktif di memori RAM server agar tidak perlu buat ulang terus
 active_chats: dict = {}
+
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
@@ -293,19 +293,24 @@ async def chat_completions(request: Request):
         if not messages:
             return JSONResponse({"error": "No messages provided."}, status_code=400)
 
-        # Ambil pesan terakhir dari user sebagai prompt aktif
         last_prompt = messages[-1].get("content", "")
         if isinstance(last_prompt, list):
             text_prompts = [p.get("text", "") for p in last_prompt if p.get("type") == "text"]
             last_prompt = " ".join(text_prompts)
 
-        # Gunakan cache sesi chat di memori jika sudah ada, atau buat baru jika belum ada
-        # (Klien OpenAI biasanya mengirim chat di sesi yang sama)
+        # Sisipkan Info OS Lokal agar AI otomatis menyesuaikan command
+        os_info = get_os_info()
+        system_context = (
+            f"[Sistem Informasi Target: OS={os_info['system']}, Release={os_info['release']}, Arch={os_info['machine']}]. "
+            "Jika kamu ingin menjalankan perintah terminal, berikan perintah tersebut di dalam blok kode markdown ```bash [perintah] ``` "
+            "agar sistem bisa mendeteksi dan mengeksekusinya secara otomatis."
+        )
+
         session_key = f"{requested_model}"
         if session_key not in active_chats:
             active_chats[session_key] = client.start_chat()
-            
-            # Jika baru pertama kali dan ada riwayat awal, masukkan sekali saja
+            await active_chats[session_key].send_message(system_context)
+
             if len(messages) > 1:
                 context_history = []
                 for msg in messages[:-1]:
@@ -319,8 +324,7 @@ async def chat_completions(request: Request):
                     await active_chats[session_key].send_message(full_context)
 
         chat = active_chats[session_key]
-
-        logger.info(f"Menerima prompt cepat (Model: {requested_model}): {last_prompt[:50]}...")
+        logger.info(f"Menerima prompt (Model: {requested_model}): {last_prompt[:50]}...")
 
         # Image Generation handling
         if "imagen" in requested_model.lower() or "buatkan gambar" in last_prompt.lower():
@@ -335,22 +339,37 @@ async def chat_completions(request: Request):
                 "choices": [{"index": 0, "message": {"role": "assistant", "content": response_text}, "finish_reason": "stop"}]
             })
 
+        # Kirim pesan ke Gemini
+        response = await chat.send_message(last_prompt, files=files if files else None)
+        response_text = response.text if hasattr(response, 'text') else str(response)
+
+        # Cek apakah AI memberikan perintah terminal di dalam blok ```bash ... ```
+        if "```bash" in response_text or "```sh" in response_text:
+            import re
+            # Ekstrak command dari blok kode
+            match = re.search(r'```(?:bash|sh)\n(.*?)\n```', response_text, re.DOTALL)
+            if match:
+                command_to_run = match.group(1).strip()
+                logger.info(f"Mengeksekusi command otomatis: {command_to_run}")
+                
+                # EKSEKUSI NYATA DI OS LOKAL (Mac/Linux/Windows)
+                shell_result = run_shell_command(command_to_run)
+                
+                # Kirim balik output terminal ke chat history AI agar dia baca hasilnya yang asli
+                feedback_prompt = f"Hasil eksekusi terminal dari perintah '{command_to_run}':\n{shell_result}\nTolong berikan jawaban akhir ke user berdasarkan hasil asli di atas."
+                final_response = await chat.send_message(feedback_prompt)
+                response_text = final_response.text if hasattr(final_response, 'text') else str(final_response)
+
         if is_stream:
             async def event_generator():
-                full_text = ""
-                async for chunk in chat.send_message_stream(last_prompt, files=files if files else None):
-                    current_text = chunk.text if hasattr(chunk, 'text') else str(chunk)
-                    delta_text = current_text[len(full_text):] if current_text.startswith(full_text) and len(full_text) > 0 else current_text
-                    full_text = current_text
-                    if delta_text:
-                        data_chunk = {
-                            "id": f"chatcmpl-{int(time.time())}",
-                            "object": "chat.completion.chunk",
-                            "created": int(time.time()),
-                            "model": requested_model,
-                            "choices": [{"index": 0, "delta": {"content": delta_text}, "finish_reason": None}]
-                        }
-                        yield f"data: {json.dumps(data_chunk)}\n\n"
+                data_chunk = {
+                    "id": f"chatcmpl-{int(time.time())}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": requested_model,
+                    "choices": [{"index": 0, "delta": {"content": response_text}, "finish_reason": None}]
+                }
+                yield f"data: {json.dumps(data_chunk)}\n\n"
                 stop_chunk = {
                     "id": f"chatcmpl-{int(time.time())}",
                     "object": "chat.completion.chunk",
@@ -362,9 +381,6 @@ async def chat_completions(request: Request):
                 yield "data: [DONE]\n\n"
 
             return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-        response = await chat.send_message(last_prompt, files=files if files else None)
-        response_text = response.text if hasattr(response, 'text') else str(response)
 
         return JSONResponse({
             "id": f"chatcmpl-{int(time.time())}",
